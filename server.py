@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -45,6 +46,20 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b'{"ok":true}')
 
     def do_GET(self):
+        if self.path in ("/", "/index.html"):
+            html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+            try:
+                with open(html_path, "rb") as f:
+                    body = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            except FileNotFoundError:
+                self.send_response(404)
+                self.end_headers()
+            return
         if self.path != "/poll":
             self.send_response(404)
             self.end_headers()
