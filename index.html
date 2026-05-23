@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dialer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .card {
+      background: white;
+      border-radius: 28px;
+      padding: 24px 22px 32px;
+      width: 330px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+    }
+
+    /* Country row */
+    .country-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 300px;
+      margin-bottom: 12px;
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 500;
+      color: #777777;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .country-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .country-select {
+      width: 100%;
+      padding: 6px 26px 6px 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      background: #f0f0f0;
+      color: #666;
+      cursor: pointer;
+      appearance: none;
+      outline: none;
+    }
+
+    .country-select:focus { outline: none; }
+
+    .country-wrap::after {
+      content: '';
+      position: absolute;
+      right: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid #bbb;
+      pointer-events: none;
+    }
+
+    /* Number display */
+    .display-row {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 42px;
+      min-height: 54px;
+      margin-top: 10px;
+    }
+
+    .display {
+      flex: 1;
+      font-size: 24px;
+      letter-spacing: 0.5px;
+      color: #222;
+      overflow: hidden;
+      white-space: nowrap;
+      padding-left: 25px;
+    }
+
+    .backspace-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: #ccc;
+      padding: 2px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      transition: color 0.12s;
+      user-select: none;
+    }
+
+    .backspace-btn:hover { color: #888; }
+    .backspace-btn:active { color: #444; }
+
+    /* Numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .num-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: none;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+      cursor: pointer;
+      margin: 0 auto;
+      transition: background 0.10s, transform 0.08s, box-shadow 0.10s;
+      user-select: none;
+    }
+
+    .num-btn:hover {
+      background: #f6f6f6;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.13);
+    }
+
+    .num-btn:active {
+      transform: scale(0.91);
+      background: #eeeeee;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+    }
+
+    .num-digit {
+      font-size: 22px;
+      font-weight: 400;
+      color: #777;
+      line-height: 1;
+    }
+
+    .num-letters {
+      font-size: 9px;
+      color: #c0c0c0;
+      letter-spacing: 1.5px;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    /* Call button */
+    .call-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: background 0.15s, transform 0.08s;
+      user-select: none;
+      margin-top: 50px;
+    }
+
+    .call-btn:hover:not(:disabled) { background: #16a34a; }
+    .call-btn:active:not(:disabled) { transform: scale(0.97); }
+    .call-btn:disabled { background: #86efac; cursor: default; }
+  </style>
+</head>
+<body>
+  <div class="country-row">
+    <div class="label">Call origin:</div>
+    <div class="country-wrap">
+      <select class="country-select" id="country-select"></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="display-row">
+      <div class="display" id="digits-display"></div>
+      <button class="backspace-btn" onclick="backspace()" title="Backspace">&#x232B;</button>
+    </div>
+
+    <div class="numpad" id="numpad"></div>
+
+    <button class="call-btn" id="call-btn" onclick="handleCall()">
+      <span>&#x2706;</span> Call
+    </button>
+  </div>
+
+  <script>
+      const CALL_ENDPOINTS = [
+        "https://dial-proxy.up.railway.app/call",
+        "https://railwayservertest.onrender.com/call",
+        window.location.origin + "/call",
+      ];
+
+      async function postCall(payload) {
+        for (const url of CALL_ENDPOINTS) {
+          try {
+            const res = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (res.ok) return;
+          } catch (_) {}
+        }
+        console.error("All endpoints failed");
+      }
+
+      const COUNTRIES = [
+      // North America
+      { flag: "🇺🇸", name: "United States",        iso: "US", code: "+1" },
+      { flag: "🇨🇦", name: "Canada",               iso: "CA", code: "+1" },
+      { flag: "🇲🇽", name: "Mexico",               iso: "MX", code: "+52" },
+      // Europe
+      { flag: "🇬🇧", name: "United Kingdom",       iso: "GB", code: "+44" },
+      { flag: "🇩🇪", name: "Germany",              iso: "DE", code: "+49" },
+      { flag: "🇫🇷", name: "France",               iso: "FR", code: "+33" },
+      { flag: "🇪🇸", name: "Spain",                iso: "ES", code: "+34" },
+      { flag: "🇮🇹", name: "Italy",                iso: "IT", code: "+39" },
+      { flag: "🇵🇹", name: "Portugal",             iso: "PT", code: "+351" },
+      { flag: "🇳🇱", name: "Netherlands",          iso: "NL", code: "+31" },
+      { flag: "🇧🇪", name: "Belgium",              iso: "BE", code: "+32" },
+      { flag: "🇨🇭", name: "Switzerland",          iso: "CH", code: "+41" },
+      { flag: "🇦🇹", name: "Austria",              iso: "AT", code: "+43" },
+      { flag: "🇸🇪", name: "Sweden",               iso: "SE", code: "+46" },
+      { flag: "🇳🇴", name: "Norway",               iso: "NO", code: "+47" },
+      { flag: "🇩🇰", name: "Denmark",              iso: "DK", code: "+45" },
+      { flag: "🇫🇮", name: "Finland",              iso: "FI", code: "+358" },
+      { flag: "🇵🇱", name: "Poland",               iso: "PL", code: "+48" },
+      { flag: "🇨🇿", name: "Czech Republic",       iso: "CZ", code: "+420" },
+      { flag: "🇸🇰", name: "Slovakia",             iso: "SK", code: "+421" },
+      { flag: "🇭🇺", name: "Hungary",              iso: "HU", code: "+36" },
+      { flag: "🇷🇴", name: "Romania",              iso: "RO", code: "+40" },
+      { flag: "🇧🇬", name: "Bulgaria",             iso: "BG", code: "+359" },
+      { flag: "🇷🇸", name: "Serbia",               iso: "RS", code: "+381" },
+      { flag: "🇭🇷", name: "Croatia",              iso: "HR", code: "+385" },
+      { flag: "🇧🇦", name: "Bosnia & Herzegovina", iso: "BA", code: "+387" },
+      { flag: "🇸🇮", name: "Slovenia",             iso: "SI", code: "+386" },
+      { flag: "🇬🇷", name: "Greece",               iso: "GR", code: "+30" },
+      { flag: "🇺🇦", name: "Ukraine",              iso: "UA", code: "+380" },
+      { flag: "🇷🇺", name: "Russia",               iso: "RU", code: "+7" },
+      { flag: "🇹🇷", name: "Turkey",               iso: "TR", code: "+90" },
+      // Asia
+      { flag: "🇯🇵", name: "Japan",                iso: "JP", code: "+81" },
+      { flag: "🇰🇷", name: "South Korea",          iso: "KR", code: "+82" },
+      { flag: "🇨🇳", name: "China",                iso: "CN", code: "+86" },
+      { flag: "🇮🇳", name: "India",                iso: "IN", code: "+91" },
+      { flag: "🇸🇬", name: "Singapore",            iso: "SG", code: "+65" },
+      { flag: "🇹🇭", name: "Thailand",             iso: "TH", code: "+66" },
+      { flag: "🇻🇳", name: "Vietnam",              iso: "VN", code: "+84" },
+      { flag: "🇮🇩", name: "Indonesia",            iso: "ID", code: "+62" },
+      { flag: "🇲🇾", name: "Malaysia",             iso: "MY", code: "+60" },
+      { flag: "🇵🇭", name: "Philippines",          iso: "PH", code: "+63" },
+      { flag: "🇹🇼", name: "Taiwan",               iso: "TW", code: "+886" },
+      { flag: "🇭🇰", name: "Hong Kong",            iso: "HK", code: "+852" },
+      { flag: "🇦🇪", name: "UAE",                  iso: "AE", code: "+971" },
+      { flag: "🇸🇦", name: "Saudi Arabia",         iso: "SA", code: "+966" },
+      { flag: "🇮🇱", name: "Israel",               iso: "IL", code: "+972" },
+      { flag: "🇵🇰", name: "Pakistan",             iso: "PK", code: "+92" },
+    ];
+
+    const KEYS = [
+      { d: "1", l: "" },     { d: "2", l: "ABC" },  { d: "3", l: "DEF" },
+      { d: "4", l: "GHI" },  { d: "5", l: "JKL" },  { d: "6", l: "MNO" },
+      { d: "7", l: "PQRS" }, { d: "8", l: "TUV" },  { d: "9", l: "WXYZ" },
+      { d: "*", l: "" },     { d: "0", l: "+" },     { d: "+", l: "" },
+    ];
+
+    let digits = "";
+    let country = { iso: "" };
+
+    const selectEl = document.getElementById("country-select");
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "Select country";
+    selectEl.appendChild(emptyOpt);
+    COUNTRIES.forEach((c, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = c.flag + "  " + c.name + "  " + c.code;
+      selectEl.appendChild(opt);
+    });
+    selectEl.addEventListener("change", () => {
+      country = selectEl.value !== "" ? COUNTRIES[+selectEl.value] : { iso: "" };
+    });
+
+    const numpad = document.getElementById("numpad");
+    KEYS.forEach(({ d, l }) => {
+      const btn = document.createElement("button");
+      btn.className = "num-btn";
+      btn.innerHTML = "<span class=\"num-digit\">" + d + "</span>" +
+        (l ? "<span class=\"num-letters\">" + l + "</span>" : "");
+      btn.onclick = () => { digits += d; render(); };
+      numpad.appendChild(btn);
+    });
+
+    function render() {
+      document.getElementById("digits-display").textContent = digits;
+    }
+
+    function backspace() {
+      digits = digits.slice(0, -1);
+      render();
+    }
+
+    function handleCall() {
+      if (!digits.length) return;
+      const btn = document.getElementById("call-btn");
+      btn.disabled = true;
+      btn.innerHTML = "<span>&#x2706;</span> Calling...";
+
+      postCall({ number: digits, country: country.iso });
+
+      setTimeout(function() {
+        digits = "";
+        render();
+        btn.disabled = false;
+        btn.innerHTML = "<span>&#x2706;</span> Call";
+      }, 800);
+    }
+
+    document.addEventListener("keydown", function(e) {
+      if ("0123456789*+".includes(e.key)) { digits += e.key; render(); }
+      else if (e.key === "Backspace") backspace();
+      else if (e.key === "Enter") handleCall();
+    });
+
+    render();
+  </script>
+</body>
+</html>
